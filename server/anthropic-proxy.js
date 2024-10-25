@@ -36,23 +36,36 @@ app.post('/api/chat', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const stream = await anthropic.messages.create({
-        model: model || 'claude-3-haiku-20240307',
-        max_tokens: max_tokens || 1024,
-        temperature: temperature || 0.7,
-        messages: conversationMessages,
-        system: system_prompt,
-        stream: true,
-      }, {
-        signal: controller.signal
-      });
+      try {
+        const stream = await anthropic.messages.create({
+          model: model || 'claude-3-haiku-20240307',
+          max_tokens: max_tokens || 1024,
+          temperature: temperature || 0.7,
+          messages: conversationMessages,
+          system: system_prompt,
+          stream: true,
+        }, {
+          signal: controller.signal
+        });
 
-      for await (const chunk of stream) {
-        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        for await (const chunk of stream) {
+          if (chunk.type === 'content_block_delta') {
+            const data = {
+              type: 'content',
+              content: chunk.delta?.text || ''
+            };
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+          }
+        }
+
+        res.write('data: [DONE]\n\n');
+        if (timeoutId) clearTimeout(timeoutId);
+        res.end();
+      } catch (streamError) {
+        console.error('Streaming Error:', streamError);
+        res.write(`data: ${JSON.stringify({ error: streamError.message })}\n\n`);
+        res.end();
       }
-
-      if (timeoutId) clearTimeout(timeoutId);
-      res.end();
     } else {
       const response = await anthropic.messages.create({
         model: model || 'claude-3-haiku-20240307',
