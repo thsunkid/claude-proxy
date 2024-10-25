@@ -37,7 +37,7 @@ app.post('/api/chat', async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
 
       try {
-        const stream = await anthropic.messages.create({
+        const response = await anthropic.messages.create({
           model: model || 'claude-3-haiku-20240307',
           max_tokens: max_tokens || 1024,
           temperature: temperature || 0.7,
@@ -48,17 +48,39 @@ app.post('/api/chat', async (req, res) => {
           signal: controller.signal
         });
 
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta') {
+        // Set up response headers for SSE
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+
+        // Process the stream
+        for await (const messageChunk of response) {
+          if (messageChunk.type === 'message_start') {
+            continue;
+          }
+          
+          if (messageChunk.type === 'content_block_start') {
+            continue;
+          }
+
+          if (messageChunk.type === 'content_block_delta') {
             const data = {
               type: 'content',
-              content: chunk.delta?.text || ''
+              content: messageChunk.delta?.text || ''
             };
             res.write(`data: ${JSON.stringify(data)}\n\n`);
+            // Flush the response to ensure chunks are sent immediately
+            res.flush?.();
+          }
+
+          if (messageChunk.type === 'message_stop') {
+            res.write('data: [DONE]\n\n');
+            break;
           }
         }
 
-        res.write('data: [DONE]\n\n');
         if (timeoutId) clearTimeout(timeoutId);
         res.end();
       } catch (streamError) {
