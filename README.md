@@ -45,7 +45,9 @@ npm start
 
 The server exposes a single endpoint:
 
-### POST /api/chat
+### Endpoints
+
+#### POST /api/chat
 
 Forwards requests to Claude's API with your authentication.
 
@@ -57,12 +59,24 @@ Forwards requests to Claude's API with your authentication.
   ],
   "model": "claude-3-opus-20240229",  // Optional, defaults to claude-3-opus-20240229
   "temperature": 0.7,                  // Optional, defaults to 0.7
-  "max_tokens": 1024                   // Optional, defaults to 1024
+  "max_tokens": 1024,                 // Optional, defaults to 1024
+  "timeout": 30000,                   // Optional, request timeout in milliseconds
+  "system_prompt": "You are a helpful assistant"  // Optional, system message to prepend
 }
 ```
 
 **Response:**
 Returns the complete response from Claude's API.
+
+#### POST /api/chat/stream
+
+Streams responses from Claude's API using Server-Sent Events (SSE).
+
+**Request Body:**
+Same as /api/chat endpoint.
+
+**Response:**
+Returns a stream of SSE events containing chunks of Claude's response.
 
 ## Testing
 
@@ -78,17 +92,27 @@ npm test
 
 ## Usage Examples
 
-### cURL
+### cURL Examples
+
+Regular endpoint:
 ```bash
 curl -X POST "http://localhost:3001/api/chat" \
      -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024}'
+     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024,"system_prompt":"You are a helpful assistant"}'
 ```
 
-### React.js
+Streaming endpoint:
+```bash
+curl -N "http://localhost:3001/api/chat/stream" \
+     -H "Content-Type: application/json" \
+     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"system_prompt":"You are a helpful assistant"}'
+```
+
+### React.js Examples
+
+Regular endpoint:
 ```jsx
-// Example using fetch
-const sendMessage = async (userMessage) => {
+const sendMessage = async (userMessage, systemPrompt) => {
   try {
     const response = await fetch('http://localhost:3001/api/chat', {
       method: 'POST',
@@ -101,7 +125,9 @@ const sendMessage = async (userMessage) => {
         ],
         model: 'claude-3-opus-20240229',
         temperature: 0.7,
-        max_tokens: 1024
+        max_tokens: 1024,
+        system_prompt: systemPrompt,
+        timeout: 30000
       })
     });
 
@@ -113,22 +139,67 @@ const sendMessage = async (userMessage) => {
   }
 };
 
+Streaming endpoint:
+```jsx
+const streamMessage = async (userMessage, systemPrompt, onChunk) => {
+  try {
+    const response = await fetch('http://localhost:3001/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: 'user', content: userMessage }
+        ],
+        system_prompt: systemPrompt
+      })
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          onChunk(data);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+};
+
 // Usage in a React component
 function ChatComponent() {
   const [response, setResponse] = useState('');
 
-  const handleSendMessage = async () => {
+  const handleStreamMessage = async () => {
     try {
-      const result = await sendMessage('What is the capital of France?');
-      setResponse(result.content[0].text);
+      await streamMessage(
+        'What is the capital of France?',
+        'You are a helpful assistant',
+        (chunk) => {
+          setResponse(prev => prev + chunk.content);
+        }
+      );
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to stream message:', error);
     }
   };
 
   return (
     <div>
-      <button onClick={handleSendMessage}>Send Message</button>
+      <button onClick={handleStreamMessage}>Send Message</button>
       <div>{response}</div>
     </div>
   );
