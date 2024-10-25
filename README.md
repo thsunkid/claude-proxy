@@ -75,3 +75,69 @@ npm test
 
 - `ANTHROPIC_API_KEY`: Your Anthropic API key (required)
 - `PORT`: Server port (optional, defaults to 3001)
+
+## Usage Examples
+
+### cURL
+```bash
+curl -X POST http://localhost:3001/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "What is the capital of France?"}
+    ],
+    "model": "claude-3-opus-20240229",
+    "temperature": 0.7,
+    "max_tokens": 1024
+  }'
+```
+
+### React.js
+```jsx
+// Example using fetch
+const sendMessage = async (userMessage) => {
+  try {
+    const response = await fetch('http://localhost:3001/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: 'user', content: userMessage }
+        ],
+        model: 'claude-3-opus-20240229',
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+};
+
+// Usage in a React component
+function ChatComponent() {
+  const [response, setResponse] = useState('');
+
+  const handleSendMessage = async () => {
+    try {
+      const result = await sendMessage('What is the capital of France?');
+      setResponse(result.content[0].text);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={handleSendMessage}>Send Message</button>
+      <div>{response}</div>
+    </div>
+  );
+}
+```
