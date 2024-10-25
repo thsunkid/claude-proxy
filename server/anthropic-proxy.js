@@ -31,7 +31,7 @@ app.post('/api/chat/stream', async (req, res) => {
     }, timeout) : null;
 
     const stream = await anthropic.messages.create({
-      model: model || 'claude-3-opus-20240229',
+      model: model || 'claude-3-haiku-20240307',
       max_tokens: max_tokens || 1024,
       temperature: temperature || 0.7,
       messages: messagesList,
