@@ -98,14 +98,14 @@ Regular endpoint:
 ```bash
 curl -X POST "http://localhost:3001/api/chat" \
      -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024,"system_prompt":"You are a helpful assistant"}'
+     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024}'
 ```
 
 Streaming endpoint:
 ```bash
 curl -N "http://localhost:3001/api/chat/stream" \
      -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"system_prompt":"You are a helpful assistant"}'
+     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}]}'
 ```
 
 ### React.js Examples
