@@ -45,11 +45,11 @@ npm start
 
 The server exposes a single endpoint:
 
-### Endpoints
+### Endpoint
 
 #### POST /api/chat
 
-Forwards requests to Claude's API with your authentication.
+Forwards requests to Claude's API with your authentication. Supports both streaming and non-streaming responses.
 
 **Request Body:**
 ```json
@@ -58,25 +58,17 @@ Forwards requests to Claude's API with your authentication.
     {"role": "system", "content": "You are a helpful assistant"},  // Optional system message
     {"role": "user", "content": "Your message here"}
   ],
-  "model": "claude-3-opus-20240229",  // Optional, defaults to claude-3-opus-20240229
-  "temperature": 0.7,                  // Optional, defaults to 0.7
-  "max_tokens": 1024,                 // Optional, defaults to 1024
-  "timeout": 30000                    // Optional, request timeout in milliseconds
+  "model": "claude-3-haiku-20240307",  // Optional, defaults to claude-3-haiku-20240307
+  "temperature": 0.7,                   // Optional, defaults to 0.7
+  "max_tokens": 1024,                  // Optional, defaults to 1024
+  "timeout": 30000,                    // Optional, request timeout in milliseconds
+  "stream": false                      // Optional, set to true for streaming response
 }
 ```
 
 **Response:**
-Returns the complete response from Claude's API.
-
-#### POST /api/chat/stream
-
-Streams responses from Claude's API using Server-Sent Events (SSE).
-
-**Request Body:**
-Same as /api/chat endpoint.
-
-**Response:**
-Returns a stream of SSE events containing chunks of Claude's response.
+When `stream: false` (default): Returns the complete response from Claude's API.
+When `stream: true`: Returns a stream of SSE events containing chunks of Claude's response.
 
 ## Testing
 
@@ -94,25 +86,25 @@ npm test
 
 ### cURL Examples
 
-Regular endpoint:
+Regular request:
 ```bash
 curl -X POST "http://localhost:3001/api/chat" \
      -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024}'
+     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-haiku-20240307","temperature":0.7,"max_tokens":1024,"stream":false}'
 ```
 
-Streaming endpoint:
+Streaming request:
 ```bash
-curl -N "http://localhost:3001/api/chat/stream" \
+curl -N "http://localhost:3001/api/chat" \
      -H "Content-Type: application/json" \
-     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}]}'
+     -d '{"messages":[{"role":"system","content":"You are a helpful assistant"},{"role":"user","content":"What is the capital of France?"}],"stream":true}'
 ```
 
 ### React.js Examples
 
 Regular endpoint:
 ```jsx
-const sendMessage = async (userMessage, systemPrompt) => {
+const sendMessage = async (userMessage, systemPrompt, stream = false) => {
   try {
     const response = await fetch('http://localhost:3001/api/chat', {
       method: 'POST',
@@ -124,26 +116,78 @@ const sendMessage = async (userMessage, systemPrompt) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        model: 'claude-3-opus-20240229',
+        model: 'claude-3-haiku-20240307',
         temperature: 0.7,
         max_tokens: 1024,
-        timeout: 30000
+        timeout: 30000,
+        stream
       })
     });
 
-    const data = await response.json();
-    return data;
+    if (!stream) {
+      const data = await response.json();
+      return data;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          onChunk(data);
+        }
+      }
+    }
   } catch (error) {
     console.error('Error:', error);
     throw error;
   }
 };
 
-Streaming endpoint:
-```jsx
-const streamMessage = async (userMessage, systemPrompt, onChunk) => {
-  try {
-    const response = await fetch('http://localhost:3001/api/chat/stream', {
+// Example usage in a React component
+function ChatComponent() {
+  const [response, setResponse] = useState('');
+
+  const handleMessage = async (streaming = false) => {
+    try {
+      if (streaming) {
+        await sendMessage(
+          'What is the capital of France?',
+          'You are a helpful assistant',
+          true,
+          (chunk) => {
+            setResponse(prev => prev + chunk.content);
+          }
+        );
+      } else {
+        const data = await sendMessage(
+          'What is the capital of France?',
+          'You are a helpful assistant',
+          false
+        );
+        setResponse(data.content);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleMessage(false)}>Send Regular Message</button>
+      <button onClick={() => handleMessage(true)}>Send Streaming Message</button>
+      <div>{response}</div>
+    </div>
+  );
+}
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
