@@ -14,11 +14,6 @@ app.post('/api/chat/stream', async (req, res) => {
   try {
     const { messages, model, temperature, max_tokens, timeout, system_prompt } = req.body;
     
-    // Prepend system message if provided
-    const messagesList = system_prompt 
-      ? [{ role: 'system', content: system_prompt }, ...messages]
-      : messages;
-
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -34,7 +29,8 @@ app.post('/api/chat/stream', async (req, res) => {
       model: model || 'claude-3-haiku-20240307',
       max_tokens: max_tokens || 1024,
       temperature: temperature || 0.7,
-      messages: messagesList,
+      messages: messages,
+      system: system_prompt,
       stream: true,
     }, {
       signal: controller.signal
@@ -61,11 +57,6 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { messages, model, temperature, max_tokens, timeout, system_prompt } = req.body;
     
-    // Prepend system message if provided
-    const messagesList = system_prompt 
-      ? [{ role: 'system', content: system_prompt }, ...messages]
-      : messages;
-
     const controller = new AbortController();
     const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : null;
     
@@ -73,7 +64,8 @@ app.post('/api/chat', async (req, res) => {
       model: model || 'claude-3-opus-20240229',
       max_tokens: max_tokens || 1024,
       temperature: temperature || 0.7,
-      messages: messagesList,
+      messages: messages,
+      system: system_prompt,
     }, {
       signal: controller.signal
     });
