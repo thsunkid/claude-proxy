@@ -17,6 +17,14 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { messages, model, temperature, max_tokens, timeout, stream } = req.body;
     
+    console.log('Received new chat request:', {
+      model,
+      temperature,
+      max_tokens,
+      timeout,
+      stream,
+      message: messages
+    });
     // Extract system prompt if present in messages
     const systemMessage = messages.find(m => m.role === 'system');
     const system_prompt = systemMessage?.content;
