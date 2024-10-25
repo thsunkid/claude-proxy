@@ -80,16 +80,9 @@ npm test
 
 ### cURL
 ```bash
-curl -X POST http://localhost:3001/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "user", "content": "What is the capital of France?"}
-    ],
-    "model": "claude-3-opus-20240229",
-    "temperature": 0.7,
-    "max_tokens": 1024
-  }'
+curl -X POST "http://localhost:3001/api/chat" \
+     -H "Content-Type: application/json" \
+     -d '{"messages":[{"role":"user","content":"What is the capital of France?"}],"model":"claude-3-opus-20240229","temperature":0.7,"max_tokens":1024}'
 ```
 
 ### React.js
