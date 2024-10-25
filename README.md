@@ -55,13 +55,13 @@ Forwards requests to Claude's API with your authentication.
 ```json
 {
   "messages": [
+    {"role": "system", "content": "You are a helpful assistant"},  // Optional system message
     {"role": "user", "content": "Your message here"}
   ],
   "model": "claude-3-opus-20240229",  // Optional, defaults to claude-3-opus-20240229
   "temperature": 0.7,                  // Optional, defaults to 0.7
   "max_tokens": 1024,                 // Optional, defaults to 1024
-  "timeout": 30000,                   // Optional, request timeout in milliseconds
-  "system_prompt": "You are a helpful assistant"  // Optional, system message to prepend
+  "timeout": 30000                    // Optional, request timeout in milliseconds
 }
 ```
 
@@ -121,12 +121,12 @@ const sendMessage = async (userMessage, systemPrompt) => {
       },
       body: JSON.stringify({
         messages: [
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
         model: 'claude-3-opus-20240229',
         temperature: 0.7,
         max_tokens: 1024,
-        system_prompt: systemPrompt,
         timeout: 30000
       })
     });
@@ -150,9 +150,9 @@ const streamMessage = async (userMessage, systemPrompt, onChunk) => {
       },
       body: JSON.stringify({
         messages: [
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
-        ],
-        system_prompt: systemPrompt
+        ]
       })
     });
 
