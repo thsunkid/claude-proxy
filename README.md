@@ -1,6 +1,6 @@
 # Claude Local Proxy Server
 
-A lightweight proxy server for Anthropic's Claude API that handles authentication and request forwarding. Running this to overcome the "CORS requests are not allowed for this Organization because of custom retention settings." error.
+A lightweight proxy server for Anthropic's Claude API that handles authentication and request forwarding. As [Anthropic doesn't support CORS](https://github.com/anthropics/anthropic-sdk-typescript/issues/219#issuecomment-1830324926), this is the recommended way to avoid the error `CORS requests are not allowed for ...` when using Claude in frontend.
 
 ## Prerequisites
 

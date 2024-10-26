@@ -15,7 +15,7 @@ const anthropic = new Anthropic({
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, model, temperature, max_tokens, timeout, stream } = req.body;
+    const { messages, model, temperature, max_tokens, timeout, stream, debug} = req.body;
     
     console.log('Received new chat request:', {
       model,
@@ -30,6 +30,40 @@ app.post('/api/chat', async (req, res) => {
     const system_prompt = systemMessage?.content;
     const conversationMessages = messages.filter(m => m.role !== 'system');
     
+    if (debug) {
+      const fakeResponse = {
+        id: 'msg_debug123456',
+        type: 'message',
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'This is a debug response. The actual API was not called.'
+          }
+        ],
+        model: model || 'claude-3-haiku-20240307',
+        stop_reason: 'end_turn',
+        usage: {
+          input_tokens: 10,
+          output_tokens: 15
+        }
+      };
+
+      if (stream) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+        res.write(`data: ${JSON.stringify({ type: 'content', content: fakeResponse.content[0].text })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } else {
+        res.json(fakeResponse);
+      }
+      return;
+    }
+
     const controller = new AbortController();
     const timeoutId = timeout ? setTimeout(() => {
       controller.abort();
