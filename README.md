@@ -89,6 +89,10 @@ npm test
 - `ANTHROPIC_API_KEY`: Your Anthropic API key (required)
 - `PORT`: Server port (optional, defaults to 3001)
 
+## Limits
+
+The server is configured to handle JSON payloads up to 50MB in size. If you need to adjust this limit, modify the `limit` parameter in `app.use(express.json({limit: '50mb'}))` in server/anthropic-proxy.js.
+
 ## Usage Examples
 
 ### cURL Examples
